@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link href="static/js/bootstrap.min.css" rel="stylesheet">
+
+    <title>Deep Solaris</title>
+
+    <style type="text/css">
+      .vertical {
+        width:800px;
+        height:600px;
+
+        display: flex;
+        justify-content: center;
+        /*margin: 0 auto;*/
+ /*       text-align: center;*/
+        /*border: 1px solid black;*/
+      }
+
+      .centerBtn{
+        display: flex;
+        justify-content: center;
+        border: 5px ;
+      }
+
+
+
+    </style>
+  </head>
+  <body>
+
+
+    <div class = "container vertical inline" > 
+      <img src="static/default.jpg" class ="img-circle" width="100%" height="100%">
+    </div>
+
+    <div>
+      <select class="form-control" id='country'>
+        <option value="Germany">Germany</option>
+        <option value="Netherlands">Netherlands</option>
+      </select>
+    </div>
+
+    <div class="form-group centerBtn">
+      <input type="text" name="GPS_X" id = "GPS_X" placeholder="GPS_X">
+      <input type="text" name="GPS_Y"  id = "GPS_Y" placeholder="GPS_Y">
+      <input type="text" id = "X_range" placeholder="X_range(max1000)">
+      <input type="text" id = "Y_range" placeholder="Y_range(max1000)">
+    </div>
+
+    <div class="centerBtn inline">
+      <button class="btn btn-primary"  type="button" id = "getImageBtn">GetImage</button>
+      <button class="btn btn-primary"  type="button" id = "DetectPanelBtn" >Detect</button>
+    </div>
+
+    <!-- Optional JavaScript -->
+    
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="static/js/jquery-3.3.1.min.js"></script>
+    <script src="static/js/bootstrap.min.js"></script>
+        <!-- Germany coordinate -->
+<!-- Aachen: center = (6.08342,50.77664) 
+Bonn: bonn_center=(7.0982, 50.7374) 
+Essen: essen_center=(7.0116, 51.4556) 
+Dortmund: dortmun_center=(7.4653,51.5136) 
+Duisburg: duisburg_center=(6.7623,51.4344) 
+Monschau: monschau_center= (6.256389,50.56) 
+Bochum: center = (7.216236, 51.481846) 
+koln residential area: center = (7.060243,50.882887) 
+Dusseldorf: center = (6.77616,51.22172)  -->
+
+
+<!-- Heerlen (5.9794988,50.8881742) -->
+    <script>
+        $("#getImageBtn").click(function(){
+
+          var gps_x = $("#GPS_X").val()
+          var gps_y = $("#GPS_Y").val()
+          var country = $("#country").val()
+          var x_range = $("#X_range").val()
+          var y_range = $("#Y_range").val()
+          if (x_range >500 || y_range>500 || x_range<0 || y_range<0 ){
+            alert("The range doesn't fit ")
+          }
+          else{
+            var data = {
+              'gps_x':gps_x,
+              'gps_y':gps_y,
+              'country':country,
+              'x_range':x_range,
+              'y_range':y_range
+            }
+
+            $.ajax({
+              type:'GET',
+              url:'http://127.0.0.1:5000/downloadPic',
+              data:data,
+              dataType:'json',//希望服务器返回json格式的数据
+              success:function(data){
+                // alert(JSON.stringify(data))
+                 //data["url"]   
+                $('img').attr('src',data['url'])
+                alert(data['url'])    
+                     }
+            })
+          }
+
+        })
+
+        $('#DetectPanelBtn').click(function(){
+          url = $('img').attr('src')
+          var data  ={
+            'Detect': true,
+            'url': url
+          }
+          $.ajax({
+            type:'GET',
+            url:'http://127.0.0.1:5000/detectSolarPanel',
+            data:data,
+            dataType:'json',//希望服务器返回json格式的数据
+            success:function(data){
+              $('img').attr('src',data['url'])    
+              alert('Detect solar panel pic successfully ' + data['url'])    
+                   }
+          })
+        });
+
+    </script>
+
+  </body>
+</html>
