@@ -13,7 +13,7 @@
     <style type="text/css">
       .vertical {
         width:800px;
-        height:600px;
+        height:800px;
 
         display: flex;
         justify-content: center;
@@ -49,8 +49,9 @@
     <div class="form-group centerBtn">
       <input type="text" name="GPS_X" id = "GPS_X" placeholder="GPS_X">
       <input type="text" name="GPS_Y"  id = "GPS_Y" placeholder="GPS_Y">
-      <input type="text" id = "X_range" placeholder="X_range(max1000)">
-      <input type="text" id = "Y_range" placeholder="Y_range(max1000)">
+      <input type="text" id = "X_range" placeholder="X_range(max500)">
+      <input type="text" id = "Y_range" placeholder="Y_range(max500)">
+      <input type="text" id = "resolution" placeholder="resolution(max5000)">
     </div>
 
     <div class="centerBtn inline">
@@ -58,6 +59,26 @@
       <button class="btn btn-primary"  type="button" id = "DetectPanelBtn" >Detect</button>
     </div>
 
+    <div class="modal fade" id="popUp" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel">Label Image</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body" id = "modal-body">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" id = "One">T_Positive</button>
+            <button type="button" class="btn btn-primary" id = "Two">F_Positive</button>
+            <button type="button" class="btn btn-primary" id = "Three">T_Negative</button>
+            <button type="button" class="btn btn-primary" id = "Four">F_Negative</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <!-- Optional JavaScript -->
     
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
@@ -77,6 +98,26 @@ Dusseldorf: center = (6.77616,51.22172)  -->
 
 <!-- Heerlen (5.9794988,50.8881742) -->
     <script>
+
+        var click_X
+        var click_Y
+        var imgName 
+        var imageSize = 800 
+
+        $("img").on("click", function(event) {
+          var x = event.pageX - this.offsetLeft;
+          var y = event.pageY - this.offsetTop;
+          // alert("X Coordinate: " + x + " Y Coordinate: " + y);
+          click_X = x
+          click_Y = y
+
+          var mymodal = $("#popUp");
+          mymodal.find('.modal-body').text('X: ' + x + " Y: " + y);
+          mymodal.modal('show');
+          imgName = $('img').attr('src')
+
+         });
+
         $("#getImageBtn").click(function(){
 
           var gps_x = $("#GPS_X").val()
@@ -84,6 +125,7 @@ Dusseldorf: center = (6.77616,51.22172)  -->
           var country = $("#country").val()
           var x_range = $("#X_range").val()
           var y_range = $("#Y_range").val()
+          var resolution = $("#resolution").val()
           if (x_range >500 || y_range>500 || x_range<0 || y_range<0 ){
             alert("The range doesn't fit ")
           }
@@ -93,7 +135,8 @@ Dusseldorf: center = (6.77616,51.22172)  -->
               'gps_y':gps_y,
               'country':country,
               'x_range':x_range,
-              'y_range':y_range
+              'y_range':y_range,
+              'resolution':resolution
             }
 
             $.ajax({
@@ -129,6 +172,83 @@ Dusseldorf: center = (6.77616,51.22172)  -->
                    }
           })
         });
+        $('#One').click(function(){
+          alert("Click One" + click_X + " " + click_Y)
+          var data = {
+            'type':'one',
+            'img':imgName,
+            'click_X':parseFloat(click_X/imageSize),
+            'click_Y':parseFloat(click_Y/imageSize)
+          }
+          $.ajax({
+            type:'GET',
+            url:'http://127.0.0.1:5000/labelData',
+            data:data,
+            dataType:'json',//希望服务器返回json格式的数据
+            success:function(data){ 
+              alert('label successfully')    
+                   }
+          })  
+        })
+
+        $('#Two').click(function(){
+          alert("Click Two" + click_X + " " + click_Y)
+          var data = {
+            'type':'two',
+            'img':imgName,
+            'click_X':parseFloat(click_X/imageSize),
+            'click_Y':parseFloat(click_Y/imageSize)
+          }
+          $.ajax({
+            type:'GET',
+            url:'http://127.0.0.1:5000/labelData',
+            data:data,
+            dataType:'json',//希望服务器返回json格式的数据
+            success:function(data){ 
+              alert('label successfully')    
+                   }
+          })                    
+
+        })
+
+        $('#Three').click(function(){
+          alert("Click Three" + click_X + " " + click_Y)
+          var data = {
+            'type':'three',
+            'img':imgName,
+            'click_X':parseFloat(click_X/imageSize),
+            'click_Y':parseFloat(click_Y/imageSize)
+          }
+          $.ajax({
+            type:'GET',
+            url:'http://127.0.0.1:5000/labelData',
+            data:data,
+            dataType:'json',//希望服务器返回json格式的数据
+            success:function(data){ 
+              alert('label successfully')    
+                   }
+          })   
+
+        })
+
+        $('#Four').click(function(){
+          alert("Click Four" + click_X + " " + click_Y)
+          var data = {
+            'type':'four',
+            'img':imgName,
+            'click_X':parseFloat(click_X/imageSize),
+            'click_Y':parseFloat(click_Y/imageSize)
+          }
+          $.ajax({
+            type:'GET',
+            url:'http://127.0.0.1:5000/labelData',
+            data:data,
+            dataType:'json',//希望服务器返回json格式的数据
+            success:function(data){ 
+              alert('label successfully')    
+                   }
+          })  
+        })
 
     </script>
 

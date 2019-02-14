@@ -35,11 +35,7 @@ from pyproj import Proj, transform
 import cv2
 from math import ceil
 
-
-
-
-
-
+import os
 
 # initialize our Flask application and the Keras model
 app = flask.Flask(__name__)
@@ -81,6 +77,7 @@ x_pixels = 1000
 y_pixels = 1000
 imgPath = "static/img/"
 imgName = "download.tiff"
+cutSize = 75
 
 def slide_location(loc,xmeters,ymeters,xtimes,ytimes):
     outProj = Proj(init='epsg:3857') # https://epsg.io/3857, basically it allows me to specify things in meters.
@@ -176,7 +173,6 @@ def classifyImage(tiles):
 def display_web():
     return render_template('template.html')
 
-
 @app.route("/downloadPic", methods = ["POST","GET"])
 
 def downloadImage():
@@ -185,6 +181,7 @@ def downloadImage():
     country = request.args.get('country')
     x_meters = float(request.args.get('x_range'))
     y_meters = float(request.args.get('y_range'))
+    resolution = float(request.args.get('resolution'))
 
     print("country = {}, x = {}, y = {}, x_range = {}, y_range = {}".format(country,gps_x,gps_y,x_meters,y_meters))
 
@@ -202,7 +199,7 @@ def downloadImage():
     for loc in tqdm(locs):
 
         print("x_meters is {}, y_meters is {}, image format is {}, loc is {}".format(x_meters,y_meters,img_format,loc))
-        img = img_selector(wms,layer,img_format,loc, styles=style , x_meters=x_meters,y_meters=y_meters, x_pixels=x_pixels,y_pixels =y_pixels)
+        img = img_selector(wms,layer,img_format,loc, styles=style , x_meters=x_meters,y_meters=y_meters, x_pixels=resolution,y_pixels =resolution)
         print("Start download pics")
         mybyteimg = img.read()
         image = Image.open(io.BytesIO(mybyteimg))
@@ -210,7 +207,7 @@ def downloadImage():
         
     image1 = images[0]
 
-    imgName = country+ "_x_"+str(gps_x) +"_y_"+str(gps_x)+"_range_"+str(x_meters)+".tiff"
+    imgName = country+ "_x_"+str(gps_x) +"_y_"+str(gps_x)+"_range_"+str(x_meters)+"_resolution_"+ str(resolution )+ ".tiff"
 
     image1.save(imgPath+imgName)
 
@@ -253,7 +250,67 @@ def detectSolarPanel():
 
     return jsonify({'url':markedUrl})
 
-@app.route("/predict", methods=["POST"])
+@app.route("/labelData", methods=["POST","GET"])
+def labelData():
+    optionType = request.args.get('type') 
+    x_val = float(request.args.get('click_X'))
+    y_val = float(request.args.get('click_Y'))
+    imgPath = request.args.get('img')
+
+    print("X is {}, Y is {}".format(x_val,y_val))
+
+    pil_im = Image.open(imgPath)
+    width,height = pil_im.size
+    x_val = width * x_val
+    y_val = height * y_val
+
+    left = x_val - cutSize
+    upper = y_val - cutSize
+    right = x_val + cutSize
+    lower = y_val + cutSize
+    path = "static/label/"
+    if optionType == "one":
+
+        picType = "True_Positive"
+        list = os.listdir(path + picType) # dir is your directory path
+        number_files = len(list)
+
+        path = path +  picType +"/" + str(number_files)+ '.png'
+        pil_im.crop((left,upper,right,lower)).save(path)
+        print("Choose " + picType)
+
+    elif optionType == "two":
+
+        picType = "False_Positive"
+        list = os.listdir(path + picType) # dir is your directory path
+        number_files = len(list)
+
+        path = path +  picType +"/" + str(number_files)+ '.png'
+        pil_im.crop((left,upper,right,lower)).save(path)
+        print("Choose " + picType)
+
+    elif optionType == "three":
+        picType = "True_Negative"
+        list = os.listdir(path + picType) # dir is your directory path
+        number_files = len(list)
+
+        path = path +  picType +"/" + str(number_files)+ '.png'
+        pil_im.crop((left,upper,right,lower)).save(path)
+        print("Choose " + picType)
+
+    elif optionType == "four":
+        picType = "False_Negative"
+        list = os.listdir(path + picType) # dir is your directory path
+        number_files = len(list)
+
+        path = path +  picType +"/" + str(number_files)+ '.png'
+        pil_im.crop((left,upper,right,lower)).save(path)
+        print("Choose " + picType)
+    return jsonify({'results':"success"})
+
+
+
+@app.route("/predict", methods=["POST","GET"])
 def predict():
     # initialize the data dictionary that will be returned from the
     # view
