@@ -12,14 +12,22 @@
 
     <style type="text/css">
       .vertical {
-        width:800px;
-        height:800px;
+        width:80vw;
+        margin-left: 10vw;
+        height:80vw;
 
         display: flex;
-        justify-content: center;
+        text-align:center;
+        display: inline-block;
         /*margin: 0 auto;*/
  /*       text-align: center;*/
         /*border: 1px solid black;*/
+      }
+
+      img {
+          margin-left: auto; 
+          margin-right:auto; 
+          display:block;
       }
 
       .centerBtn{
@@ -35,8 +43,8 @@
   <body>
 
 
-    <div class = "container vertical inline" > 
-      <img src="static/default.jpg" class ="img-circle" width="100%" height="100%">
+    <div class = "vertical" > 
+      <img src="static/default.jpg" id = 'image' class ="img-circle" width="100%" height="100%">
     </div>
 
     <div>
@@ -102,12 +110,17 @@ Dusseldorf: center = (6.77616,51.22172)  -->
         var click_X
         var click_Y
         var imgName 
-        var imageSize = 800 
+        var img_width  
+        var img_height  
 
         $("img").on("click", function(event) {
           var x = event.pageX - this.offsetLeft;
+
+          img_width =  $("#image").width()
           var y = event.pageY - this.offsetTop;
-          // alert("X Coordinate: " + x + " Y Coordinate: " + y);
+          img_height = $("#image").height()
+          alert("X Coordinate: " + x + " Y Coordinate: " + y + " height:"+img_width + " width:" + img_height);
+   
           click_X = x
           click_Y = y
 
@@ -173,12 +186,12 @@ Dusseldorf: center = (6.77616,51.22172)  -->
           })
         });
         $('#One').click(function(){
-          alert("Click One" + click_X + " " + click_Y)
+          alert("Click One" + click_X + " " + click_Y + " Pic size x_ " + img_width + " y_" + img_height)
           var data = {
             'type':'one',
             'img':imgName,
-            'click_X':parseFloat(click_X/imageSize),
-            'click_Y':parseFloat(click_Y/imageSize)
+            'click_X':parseFloat(click_X/img_width),
+            'click_Y':parseFloat(click_Y/img_height)
           }
           $.ajax({
             type:'GET',
@@ -196,8 +209,8 @@ Dusseldorf: center = (6.77616,51.22172)  -->
           var data = {
             'type':'two',
             'img':imgName,
-            'click_X':parseFloat(click_X/imageSize),
-            'click_Y':parseFloat(click_Y/imageSize)
+            'click_X':parseFloat(click_X/img_width),
+            'click_Y':parseFloat(click_Y/img_height)
           }
           $.ajax({
             type:'GET',
@@ -216,8 +229,8 @@ Dusseldorf: center = (6.77616,51.22172)  -->
           var data = {
             'type':'three',
             'img':imgName,
-            'click_X':parseFloat(click_X/imageSize),
-            'click_Y':parseFloat(click_Y/imageSize)
+            'click_X':parseFloat(click_X/img_width),
+            'click_Y':parseFloat(click_Y/img_height)
           }
           $.ajax({
             type:'GET',
@@ -236,8 +249,8 @@ Dusseldorf: center = (6.77616,51.22172)  -->
           var data = {
             'type':'four',
             'img':imgName,
-            'click_X':parseFloat(click_X/imageSize),
-            'click_Y':parseFloat(click_Y/imageSize)
+            'click_X':parseFloat(click_X/img_width),
+            'click_Y':parseFloat(click_Y/img_height)
           }
           $.ajax({
             type:'GET',

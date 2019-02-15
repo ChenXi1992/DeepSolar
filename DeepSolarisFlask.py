@@ -8,10 +8,9 @@
 
 # import the necessary packages
 from keras.applications import ResNet50
-from keras.preprocessing.image import img_to_array
+
 from keras.applications import imagenet_utils
-from PIL import Image
-import numpy as np
+
 import flask
 import io
 
@@ -34,37 +33,20 @@ from tqdm import tqdm
 from pyproj import Proj, transform
 import cv2
 from math import ceil
-
 import os
+
+
+import tool 
+import webMapTool
 
 # initialize our Flask application and the Keras model
 app = flask.Flask(__name__)
-
-def vgg16_model(trainable=True):
-    base_model = VGG16(False, "imagenet")
-    train_from_layer = -2
-    for layer in base_model.layers[:train_from_layer]:
-        layer.trainable = False
-        print("{} is not trainable".format(layer.name))
-    for layer in base_model.layers[train_from_layer:]:
-        #layer.trainable = True
-        layer.trainable = False
-        print("{} is trainable".format(layer.name))
-    last_conv_layer = base_model.get_layer("block5_conv3")
-    x = GlobalAveragePooling2D()(last_conv_layer.output)
-    #x = Flatten()(last_conv_layer.output)
-    x = BatchNormalization(axis=-1)(x)
-    x = Dropout(0.5)(x)
-    x = Dense(512, activation="relu")(x)        
-    predictions = Dense(1, activation="sigmoid")(x)
-    return Model(base_model.input, predictions)
-
-
-model = vgg16_model(False)
+model = tool.vgg16_model(False)
 model.load_weights('static/vgg16_3t_wmp_wr_aachen__06_0.89.hdf5')
 graph = tf.get_default_graph()
 country = "Germany"
 wms = WebMapService('https://www.wms.nrw.de/geobasis/wms_nw_dop', version='1.1.1') # Germany
+
 
  # Netherlands, WebMapService('https://geodata.nationaalgeoregister.nl/luchtfoto/rgb/wms?&request=GetCapabilities', version='1.1.1')
 
@@ -78,96 +60,8 @@ y_pixels = 1000
 imgPath = "static/img/"
 imgName = "download.tiff"
 cutSize = 75
-
-def slide_location(loc,xmeters,ymeters,xtimes,ytimes):
-    outProj = Proj(init='epsg:3857') # https://epsg.io/3857, basically it allows me to specify things in meters.
-    inProj = Proj(init='epsg:4326') # https://epsg.io/4326
-    x, y = transform(inProj,outProj,loc[0],loc[1])
-    locs = []
-    #in GPS
-    #locs.append(loc)
-    for i in range(xtimes):
-        for j in range(ytimes):
-            x = x + xmeters*i
-            y = y + ymeters*j
-            x_gps,y_gps=transform(outProj,inProj,x,y)
-            loc = (x_gps,y_gps)
-            locs.append(loc)
-    return locs
-
-
-def img_selector(wms,layer,img_format,loc, styles=None , x_meters=1000,y_meters=1000, x_pixels=5000,y_pixels =5000):
-    outProj = Proj(init='epsg:3857') # https://epsg.io/3857, basically it allows me to specify things in meters..
-    inProj = Proj(init='epsg:4326') # https://epsg.io/4326
-    x, y = transform(inProj,outProj,loc[0],loc[1])
-    region_size = (x_meters, y_meters)
-    print("x:{},y:{},xmeter:{},ymeters:{}".format(x,y,x_meters,y_meters))
-    xupper = int(round(x - region_size[0] / 2))
-    xlower = int(round(x + region_size[0] / 2))
-    yupper = int(round(y - region_size[1] / 2))
-    ylower = int(round(y + region_size[1] / 2))
-    bbox = (xupper, yupper, xlower, ylower)
-    if not styles==None:
-        print("*****************")
-        print("wms:{}, layers:{}, bbox:{}, img_format:{}".format(wms,layer,bbox,img_format))
-        print("*****************")
-        img = wms.getmap(layers=[layer], styles=['default'], srs='EPSG:3857',
-                     bbox=bbox, 
-                     size=(x_pixels, y_pixels), format=img_format, transparent=True)
-        print("load img info")
-    else:
-
-        img = wms.getmap(layers=[layer], srs='EPSG:3857',
-                     bbox=bbox, 
-                     size=(x_pixels, y_pixels), format=img_format, transparent=True)
-    return img
-
-def load_model():
-    # load the pre-trained Keras model (here we are using a model
-    # pre-trained on ImageNet and provided by Keras, but you can
-    # substitute in your own networks just as easily)
-    print("load_model")
+epochs = 10 
     
-def prepare_image(image, target):
-    # if the image mode is not RGB, convert it
-    if image.mode != "RGB":
-        image = image.convert("RGB")
-
-    # resize the input image and preprocess it
-    image = image.resize(target)
-    image = img_to_array(image)
-    image = np.expand_dims(image, axis=0)
-    image = imagenet_utils.preprocess_input(image)
-
-    # return the processed image
-    return image
-
-def classifyImage(tiles):
-    satelliteIndex  = []
-    count = 0
-    for tile in tiles:
-        try:
-            prediction = model.predict(np.expand_dims(tile/255,axis=0))      
-    #         predicted_class = np.argmax(prediction)
-            predicted_class = np.round(prediction)
-        
-            if predicted_class ==0:
-                count = count
-    #             myimg = cv2.cvtColor(tile, cv2.COLOR_BGR2RGB)
-    #             cv2.imwrite( negFilePath + image_name+ "_img_"+str(count)+".png",myimg)
-            if predicted_class ==1:
-                print(count)
-                satelliteIndex.append(count)
-                
-                #myimg = cv2.cvtColor(tile, cv2.COLOR_BGR2RGB)
-                #cv2.imwrite( posFilePath + image_name+ "_img_"+str(count)+".png",myimg)      
-            count+=1
-        except: 
-            #print("shape")
-            traceback.print_exc()
-            print(tile.shape)
-    return satelliteIndex
-
 
 @app.route('/')
 def display_web():
@@ -193,13 +87,13 @@ def downloadImage():
         layer = 'nw_dop_rgb'
 
     loc = (gps_x, gps_y) 
-    locs = slide_location(loc,xmeters=x_meters,ymeters=y_meters,xtimes=1,ytimes=1)
+    locs = webMapTool.slide_location(loc,xmeters=x_meters,ymeters=y_meters,xtimes=1,ytimes=1)
     images = []
 
     for loc in tqdm(locs):
 
         print("x_meters is {}, y_meters is {}, image format is {}, loc is {}".format(x_meters,y_meters,img_format,loc))
-        img = img_selector(wms,layer,img_format,loc, styles=style , x_meters=x_meters,y_meters=y_meters, x_pixels=resolution,y_pixels =resolution)
+        img = webMapTool.img_selector(wms,layer,img_format,loc, styles=style , x_meters=x_meters,y_meters=y_meters, x_pixels=resolution,y_pixels =resolution)
         print("Start download pics")
         mybyteimg = img.read()
         image = Image.open(io.BytesIO(mybyteimg))
@@ -207,7 +101,7 @@ def downloadImage():
         
     image1 = images[0]
 
-    imgName = country+ "_x_"+str(gps_x) +"_y_"+str(gps_x)+"_range_"+str(x_meters)+"_resolution_"+ str(resolution )+ ".tiff"
+    imgName = country+ "_x_"+str(gps_x) +"_y_"+str(gps_y)+"_range_"+str(x_meters)+"_resolution_"+ str(resolution )+ ".tiff"
 
     image1.save(imgPath+imgName)
 
@@ -234,8 +128,7 @@ def detectSolarPanel():
     #     tiles[i]=cv2.cvtColor(tiles[i], cv2.COLOR_RGBA2RGB)
     # Do the classification 
     print("Start classification")
-    satelliteIndex = classifyImage(tiles)
-
+    satelliteIndex = tool.classifyImage(tiles)
 
     # Remark the pic and save it locally 
     for count in satelliteIndex:
@@ -246,9 +139,9 @@ def detectSolarPanel():
     markedUrl = url[:-4]+"_marked.png"
     cv2.imwrite(markedUrl, image1)
 
-
-
     return jsonify({'url':markedUrl})
+
+
 
 @app.route("/labelData", methods=["POST","GET"])
 def labelData():
@@ -256,58 +149,47 @@ def labelData():
     x_val = float(request.args.get('click_X'))
     y_val = float(request.args.get('click_Y'))
     imgPath = request.args.get('img')
-
+    print("img path is " + imgPath)
+    fileName =  os.path.basename(imgPath)
     print("X is {}, Y is {}".format(x_val,y_val))
+
+    fileName = fileName[:-4] + "_x_"+str(x_val)[:4] + "_y_" + str(y_val)[:4]+".png"
 
     pil_im = Image.open(imgPath)
     width,height = pil_im.size
+    print("Image width is {}, height is {}".format(width,height))
     x_val = width * x_val
     y_val = height * y_val
 
-    left = x_val - cutSize
-    upper = y_val - cutSize
-    right = x_val + cutSize
-    lower = y_val + cutSize
+    left = x_val - cutSize/2
+    upper = y_val - cutSize/2
+    right = x_val + cutSize/2
+    lower = y_val + cutSize/2
+
+
     path = "static/label/"
     if optionType == "one":
-
-        picType = "True_Positive"
-        list = os.listdir(path + picType) # dir is your directory path
-        number_files = len(list)
-
-        path = path +  picType +"/" + str(number_files)+ '.png'
-        pil_im.crop((left,upper,right,lower)).save(path)
-        print("Choose " + picType)
-
+        picType = "True_Positive/"
+        label = [1]
+        tool.saveImage(model,epochs,path,picType,label,fileName,pil_im,left,upper,right,lower)
     elif optionType == "two":
-
-        picType = "False_Positive"
-        list = os.listdir(path + picType) # dir is your directory path
-        number_files = len(list)
-
-        path = path +  picType +"/" + str(number_files)+ '.png'
-        pil_im.crop((left,upper,right,lower)).save(path)
-        print("Choose " + picType)
+        picType = "False_Positive/"
+        label = [0]
+        tool.saveImage(model,epochs,path,picType,label,fileName,pil_im,left,upper,right,lower)
 
     elif optionType == "three":
-        picType = "True_Negative"
-        list = os.listdir(path + picType) # dir is your directory path
-        number_files = len(list)
-
-        path = path +  picType +"/" + str(number_files)+ '.png'
-        pil_im.crop((left,upper,right,lower)).save(path)
-        print("Choose " + picType)
+        picType = "True_Negative/"
+        label = [0] 
+        tool.saveImage(model,epochs,path,picType,label,fileName,pil_im,left,upper,right,lower)
 
     elif optionType == "four":
-        picType = "False_Negative"
-        list = os.listdir(path + picType) # dir is your directory path
-        number_files = len(list)
+        picType = "False_Negative/"
+        label = [1]
+        tool.saveImage(model,epochs,path,picType,label,fileName,pil_im,left,upper,right,lower)
+        
 
-        path = path +  picType +"/" + str(number_files)+ '.png'
-        pil_im.crop((left,upper,right,lower)).save(path)
-        print("Choose " + picType)
     return jsonify({'results':"success"})
-
+        
 
 
 @app.route("/predict", methods=["POST","GET"])
@@ -324,7 +206,7 @@ def predict():
             image = Image.open(io.BytesIO(image))
 
             # preprocess the image and pmsWMSLoadGetMapParamsepare it for classification
-            image = prepare_image(image, target=(75, 75))
+            image = tool.prepare_image(image, target=(75, 75))
 
             # classify the input image and then initialize the list
             # of predictions to return to the client
