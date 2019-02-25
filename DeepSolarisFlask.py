@@ -34,6 +34,7 @@ from pyproj import Proj, transform
 import cv2
 from math import ceil
 import os
+import csv
 
 
 import tool 
@@ -55,13 +56,16 @@ img_format = "image/tiff"
 style='default'
 x_meters = 500
 y_meters = 500
-x_pixels = 1000
-y_pixels = 1000
+
 imgPath = "static/img/"
 imgName = "download.tiff"
-cutSize = 75
+cutSize = 200
 epochs = 10 
+imgWidth = 1000
+imgHheight = 1000
+bbox_m  = 0   # (xupper, yupper, xlower, ylower)
     
+solarPanelCoordinate  = "solarPanelCoordinate.csv"
 
 @app.route('/')
 def display_web():
@@ -70,6 +74,7 @@ def display_web():
 @app.route("/downloadPic", methods = ["POST","GET"])
 
 def downloadImage():
+    global x_meters,y_meters
     gps_x = float(request.args.get('gps_x') )
     gps_y = float(request.args.get('gps_y'))
     country = request.args.get('country')
@@ -93,7 +98,9 @@ def downloadImage():
     for loc in tqdm(locs):
 
         print("x_meters is {}, y_meters is {}, image format is {}, loc is {}".format(x_meters,y_meters,img_format,loc))
-        img = webMapTool.img_selector(wms,layer,img_format,loc, styles=style , x_meters=x_meters,y_meters=y_meters, x_pixels=resolution,y_pixels =resolution)
+        global bbox_m
+        img, bbox_m = webMapTool.img_selector(wms,layer,img_format,loc, styles=style , x_meters=x_meters,y_meters=y_meters, x_pixels=resolution,y_pixels =resolution)
+        print(bbox_m)
         print("Start download pics")
         mybyteimg = img.read()
         image = Image.open(io.BytesIO(mybyteimg))
@@ -114,6 +121,8 @@ def downloadImage():
     return jsonify({'url':imgPath+pngName})
 
 @app.route("/detectSolarPanel",methods = ["POST","GET"])
+
+
 def detectSolarPanel():
 
     url = request.args.get('url') 
@@ -127,17 +136,37 @@ def detectSolarPanel():
     # for i in range(0,len(tiles)):
     #     tiles[i]=cv2.cvtColor(tiles[i], cv2.COLOR_RGBA2RGB)
     # Do the classification 
-    print("Start classification")
-    satelliteIndex = tool.classifyImage(tiles)
-
+    #print("Start classification")
+    satelliteIndex = tool.classifyImage(model,tiles)
+    print("bbox_m: " + str(bbox_m))
     # Remark the pic and save it locally 
+
     for count in satelliteIndex:
-        col = count % ceil(image1.shape[0] / M)
+
+        col =    count % ceil(image1.shape[0] / M)
         row =    int(count / ceil(image1.shape[0] / M))
+
+        lng = bbox_m[0]
+        lat = bbox_m[1]
+
+        disLng = (float((col* M + M/2 )) / imgWidth) * x_meters 
+        disLat = (float((row* M + M/2 )) / imgWidth) * y_meters 
+
+        p = Proj("+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs")
+        lon, lat = p(lng + disLng, lat+cutSize-disLat, inverse=True)
+
+        print("Count:{}, disLng: {}, Longitude:{}, disLat{},latitude:{}".format(count,disLng,lon,disLat,lat) )
         cv2.circle(image1, (col*M+25,row*M+25), int(M/2), (0,0,255), thickness=10, lineType=8, shift=0) 
+
+        # Write the results to csv file 
+        # with open (solarPanelCoordinate,'a') as file:
+        #     writer = csv.writer(file)
+        #     writer.writerow([lon,lat])
     # markedImg = cv2.cvtColor(image1, cv2.COLOR_BGR2RGB)
     markedUrl = url[:-4]+"_marked.png"
     cv2.imwrite(markedUrl, image1)
+
+
 
     return jsonify({'url':markedUrl})
 
@@ -145,21 +174,24 @@ def detectSolarPanel():
 
 @app.route("/labelData", methods=["POST","GET"])
 def labelData():
+    global imgWidth
+    global imgHheight
     optionType = request.args.get('type') 
     x_val = float(request.args.get('click_X'))
     y_val = float(request.args.get('click_Y'))
     imgPath = request.args.get('img')
     print("img path is " + imgPath)
+    imgPath =  imgPath.replace("_marked","")
     fileName =  os.path.basename(imgPath)
     print("X is {}, Y is {}".format(x_val,y_val))
 
     fileName = fileName[:-4] + "_x_"+str(x_val)[:4] + "_y_" + str(y_val)[:4]+".png"
 
     pil_im = Image.open(imgPath)
-    width,height = pil_im.size
-    print("Image width is {}, height is {}".format(width,height))
-    x_val = width * x_val
-    y_val = height * y_val
+    imgWidth,imgHheight = pil_im.size
+    print("Image width is {}, height is {}".format(imgWidth,imgHheight))
+    x_val = imgWidth * x_val
+    y_val = imgHheight * y_val
 
     left = x_val - cutSize/2
     upper = y_val - cutSize/2

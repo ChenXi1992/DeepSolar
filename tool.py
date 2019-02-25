@@ -45,13 +45,14 @@ def saveImage(model,epochs,path,picType,label,fileName,pil_im,left,upper,right,l
             files.append(file)
 
     number_files = len(files)
- 
-    if number_files >= 5:
-        images =  create_batches(path+picType,files)
-        retrainModel(model,epochs,images,number_files,label)
-        for file in files:
-            print("move file " + file)
-            shutil.move(path+picType+file, path+"Trained/"+picType+file)
+    
+    # if number_files >= 5:
+    #     images =  create_batches(path+picType,files)
+    #     retrainModel(model,epochs,images,number_files,label)
+    #     for file in files:
+    #         print("move file " + file)
+    #         shutil.move(path+picType+file, path+"Trained/"+picType+file)
+
     print("Choose " + picType)
 
     pil_im.crop((left,upper,right,lower)).save(path +  picType + fileName)
@@ -88,7 +89,7 @@ def vgg16_model(trainable=True):
     model.compile(optimizer="adadelta", loss='binary_crossentropy')
     return model
 
-def classifyImage(tiles):
+def classifyImage(model,tiles):
     satelliteIndex  = []
     count = 0
     for tile in tiles:
@@ -106,7 +107,7 @@ def classifyImage(tiles):
                 satelliteIndex.append(count)
                 
                 #myimg = cv2.cvtColor(tile, cv2.COLOR_BGR2RGB)
-                #cv2.imwrite( posFilePath + image_name+ "_img_"+str(count)+".png",myimg)      
+                #cv2.imwrite( "img_"+str(count)+".png",tile)      
             count+=1
         except: 
             #print("shape")

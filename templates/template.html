@@ -7,6 +7,8 @@
 
     <!-- Bootstrap CSS -->
     <link href="static/js/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.4.0/dist/leaflet.css"
+   integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA==" crossorigin=""/>
 
     <title>Deep Solaris</title>
 
@@ -36,12 +38,13 @@
         border: 5px ;
       }
 
-
+      #mapid { height: 400px;}
 
     </style>
   </head>
   <body>
 
+    <div id="mapid"></div>
 
     <div class = "vertical" > 
       <img src="static/default.jpg" id = 'image' class ="img-circle" width="100%" height="100%">
@@ -50,16 +53,35 @@
     <div>
       <select class="form-control" id='country'>
         <option value="Germany">Germany</option>
-        <option value="Netherlands">Netherlands</option>
+        <!-- <option value="Netherlands">Netherlands</option> -->
       </select>
     </div>
 
     <div class="form-group centerBtn">
       <input type="text" name="GPS_X" id = "GPS_X" placeholder="GPS_X">
       <input type="text" name="GPS_Y"  id = "GPS_Y" placeholder="GPS_Y">
-      <input type="text" id = "X_range" placeholder="X_range(max500)">
-      <input type="text" id = "Y_range" placeholder="Y_range(max500)">
-      <input type="text" id = "resolution" placeholder="resolution(max5000)">
+      <input type="text" id = "X_range" placeholder="X_range(max500)" value="200">
+      <input type="text" id = "Y_range" placeholder="Y_range(max500)" value="200">
+      <input type="text" id = "resolution" placeholder="resolution(max5000)" value="1000">
+    </div>
+
+
+    <div class="modal fade" id="popUp1" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel">Label Image</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body" id = "modal-body">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-dismiss="modal"  id = "downloadPicBtn">Download Image</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="centerBtn inline">
@@ -92,6 +114,8 @@
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
     <script src="static/js/jquery-3.3.1.min.js"></script>
     <script src="static/js/bootstrap.min.js"></script>
+
+    <script src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js" integrity="sha512-QVftwZFqvtRNi0ZyCtsznlKSWOStnDORoefr1enyq5mVL4tmKB3S/EnC3rRJcxCPavG10IcrVGSmPh6Qw5lwrg=="crossorigin=""></script>
         <!-- Germany coordinate -->
 <!-- Aachen: center = (6.08342,50.77664) 
 Bonn: bonn_center=(7.0982, 50.7374) 
@@ -112,27 +136,57 @@ Dusseldorf: center = (6.77616,51.22172)  -->
         var imgName 
         var img_width  
         var img_height  
+        var marker 
 
-        $("img").on("click", function(event) {
+
+        var map = L.map('mapid').setView([51.22172, 6.77616], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        map.on('click', onMapClick);
+
+
+        function onMapClick(e) {
+
+          if(marker){
+            map.removeLayer(marker)
+          }
+
+          marker = new L.marker(e.latlng).addTo(map);
+
+          alert("You clicked the map at " + e.latlng);
+  
+          $('#GPS_Y').val(e.latlng.lat);
+          $('#GPS_X').val(e.latlng.lng);
+
+          var mymodal = $("#popUp1");
+          mymodal.find('.modal-body').text('latitude: ' + e.latlng.lat + " longitude: " + e.latlng.lng);
+          mymodal.modal('show');
+        }
+
+
+        $("#image").on("click", function(event) {
           var x = event.pageX - this.offsetLeft;
 
           img_width =  $("#image").width()
           var y = event.pageY - this.offsetTop;
           img_height = $("#image").height()
           alert("X Coordinate: " + x + " Y Coordinate: " + y + " height:"+img_width + " width:" + img_height);
-   
           click_X = x
           click_Y = y
 
           var mymodal = $("#popUp");
           mymodal.find('.modal-body').text('X: ' + x + " Y: " + y);
           mymodal.modal('show');
-          imgName = $('img').attr('src')
+
+          imgName = $('#image').attr('src')
 
          });
 
-        $("#getImageBtn").click(function(){
+        $("#getImageBtn").on("click",downloadPic)
 
+        function downloadPic(){
           var gps_x = $("#GPS_X").val()
           var gps_y = $("#GPS_Y").val()
           var country = $("#country").val()
@@ -160,16 +214,22 @@ Dusseldorf: center = (6.77616,51.22172)  -->
               success:function(data){
                 // alert(JSON.stringify(data))
                  //data["url"]   
-                $('img').attr('src',data['url'])
+                $('#image').attr('src',data['url'])
                 alert(data['url'])    
                      }
             })
           }
+        }
 
+        $('#downloadPicBtn').click(function(){
+          var mymodal = $("#popUp");
+          mymodal.modal('hide');
+          downloadPic()
+          $('html,body').animate({scrollTop: $("#image").offset().top});
         })
 
         $('#DetectPanelBtn').click(function(){
-          url = $('img').attr('src')
+          url = $('#image').attr('src')
           var data  ={
             'Detect': true,
             'url': url
@@ -180,7 +240,7 @@ Dusseldorf: center = (6.77616,51.22172)  -->
             data:data,
             dataType:'json',//希望服务器返回json格式的数据
             success:function(data){
-              $('img').attr('src',data['url'])    
+              $('#image').attr('src',data['url'])    
               alert('Detect solar panel pic successfully ' + data['url'])    
                    }
           })

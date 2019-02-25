@@ -41,4 +41,4 @@ def img_selector(wms,layer,img_format,loc, styles=None , x_meters=1000,y_meters=
         img = wms.getmap(layers=[layer], srs='EPSG:3857',
                      bbox=bbox, 
                      size=(x_pixels, y_pixels), format=img_format, transparent=True)
-    return img
+    return img,bbox
