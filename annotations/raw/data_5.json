@@ -1,16 +1,5 @@
 [
-    {
-        "id": "5cafa35864674",
-        "annotator": "deniz",
-        "url": "input\/Bocholt_x_6.594515157642052_y_51.827565634725545_range_50_resolution_500.png",
-        "timestamp": "2019-04-11 20:28:08",
-        "POIs": "[]",
-        "Polygons": "[]",
-        "FreeDots": "[]",
-        "Boxes": "[]",
-        "DisplayTime": "1555014479913",
-        "SubmitTime": "1555014479913"
-    },
+    
     {
         "id": "5cafa35ab5e75",
         "annotator": "deniz",
@@ -154,18 +143,6 @@
         "Boxes": "[]",
         "DisplayTime": "1555014578161",
         "SubmitTime": "1555014578161"
-    },
-    {
-        "id": "5cafa3be4be9a",
-        "annotator": "deniz",
-        "url": "input\/Bocholt_x_6.594515157642052_y_51.82034763834192_range_50_resolution_500.png",
-        "timestamp": "2019-04-11 20:29:50",
-        "POIs": "[{\"x\":463,\"y\":460},{\"x\":285,\"y\":48}]",
-        "Polygons": "[]",
-        "FreeDots": "[]",
-        "Boxes": "[]",
-        "DisplayTime": "1555014579549",
-        "SubmitTime": "1555014588676"
     },
     {
         "id": "5cafa3c039640",
